@@ -15,24 +15,46 @@
 
 <body>
     <div class="flex flex-col justify-center text-center">
-        <div>
-            <img src="/img/logo.png" alt="">
+        <div class="mb-4">
+            <a href="#" onclick="resetSearch()"><img src="/img/logo.png" alt=""></a>
         </div>
 
         <!-- Search form -->
         <form id="searchForm" class="mb-2">
-            <label for="searchQuery">Search for:</label>
             <input type="text" id="searchQuery" placeholder="Enter your search topic">
             <button type="button" onclick="performSearch()">Search</button>
         </form>
     </div>
 
-    <div id="photosContainer" class="mb-2"></div>
+    <div>
+        <div id="pagination" class="mb-2"></div>
+        <div id="photosContainer" class="mb-2"></div>
+
+        <button class="loadMore mb-2 mx-1" type="button" onclick="loadMore()" id="loadMore">
+            <span class="circle" aria-hidden="true">
+                <span class="icon arrow"></span>
+            </span>
+            <span class="button-text">Load More</span>
+        </button>
+    </div>
 
     <script>
+        let currentPage = 1;
+
+        // Function to reset the search to default page 1
+        function resetSearch() {
+            document.getElementById('searchQuery').value = ''; // Clear the search query
+            currentPage = 1; // Reset current page
+            const defaultQuery = 'technology';
+            const defaultCount = 20;
+            getPhotos(defaultQuery, defaultCount, currentPage)
+                .then(displayPhotos)
+                .catch(error => console.error('Error fetching photos:', error));
+        }
+
         // Function to fetch photos based on a query
-        async function getPhotos(query, count) {
-            const url = `https://pexelsdimasv1.p.rapidapi.com/v1/search?query=${query}&locale=en-US&per_page=${count}&page=10`;
+        async function getPhotos(query, count, page) {
+            const url = `https://pexelsdimasv1.p.rapidapi.com/v1/search?query=${query}&locale=en-US&per_page=${count}&page=${page}`;
             const options = {
                 method: 'GET',
                 headers: {
@@ -45,10 +67,10 @@
             try {
                 const response = await fetch(url, options);
                 const data = await response.json();
-                return data.photos;
+                return data;
             } catch (error) {
                 console.error('Error fetching photos:', error);
-                return [];
+                return { photos: [] };
             }
         }
 
@@ -57,7 +79,7 @@
             const photosContainer = document.getElementById('photosContainer');
             photosContainer.innerHTML = ''; // Clear existing content
 
-            photos.forEach(photo => {
+            photos.photos.forEach(photo => {
                 const img = document.createElement('img');
                 img.src = photo.src.medium;
                 img.alt = photo.photographer;
@@ -65,23 +87,35 @@
 
                 photosContainer.appendChild(img);
             });
+
+            // Display pagination
+            const paginationContainer = document.getElementById('pagination');
+            paginationContainer.textContent = `Page ${photos.page}`;
         }
 
         // Function to perform search
-        function performSearch() {
+        async function performSearch() {
+            currentPage = 1; // Reset current page when performing a new search
             const searchQuery = document.getElementById('searchQuery').value;
-            const count = 30;
+            const count = 20;
+            const photos = await getPhotos(searchQuery, count, currentPage);
+            displayPhotos(photos);
+        }
 
-            getPhotos(searchQuery, count)
-                .then(displayPhotos)
-                .catch(error => console.error('Error fetching photos:', error));
+        // Function to load more photos
+        async function loadMore() {
+            currentPage++;
+            const searchQuery = document.getElementById('searchQuery').value;
+            const count = 20;
+            const photos = await getPhotos(searchQuery, count, currentPage);
+            displayPhotos(photos);
         }
 
         // Initial load with default query
-        const defaultQuery = 'beach';
-        const defaultCount = 30;
+        const defaultQuery = 'technology';
+        const defaultCount = 20;
 
-        getPhotos(defaultQuery, defaultCount)
+        getPhotos(defaultQuery, defaultCount, currentPage)
             .then(displayPhotos)
             .catch(error => console.error('Error fetching photos:', error));
     </script>
